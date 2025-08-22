@@ -73,6 +73,7 @@ const App = () => {
   const [uploadMessage, setUploadMessage] = useState('');
   const [resumeUploading, setResumeUploading] = useState(false);
   const [resumeProgress, setResumeProgress] = useState(0);
+  const [resumeFileName, setResumeFileName] = useState('');
 
   // Load settings from localStorage
   useEffect(() => {
@@ -339,16 +340,7 @@ const App = () => {
     };
 
     // Quick status update
-    const handleQuickStatusUpdate = async (app, status) => {
-      if (!userId) return;
-      try {
-        const docRef = doc(db, `users/${userId}/jobApplications`, app.id);
-        await updateDoc(docRef, { status });
-      } catch (e) {
-        console.error('Quick status update failed', e);
-        setAlertMessage('Failed to update status');
-      }
-    };
+    // Quick status buttons removed; status can be changed via Edit
 
   // --- JSX Rendering ---
   // The rest of your JSX remains largely the same.
@@ -380,7 +372,7 @@ const App = () => {
                 <input type="url" placeholder="Paste job posting URL (LinkedIn, Greenhouse, Lever, company careers)" value={jobUrlInput} onChange={(e) => setJobUrlInput(e.target.value)} className="flex-1 rounded-md border border-indigo-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
                 <button onClick={handleAutoFillFromUrl} disabled={autoFillLoading} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:bg-indigo-300">{autoFillLoading ? 'Auto-filling…' : 'Auto-Fill with AI'}</button>
               </div>
-              <p className="text-xs text-indigo-700 mt-2">We fetch a clean version of the page and extract key fields using AI.</p>
+              {/* Info text removed per user request */}
             </div>
 
             {/* Form Section */}
@@ -470,10 +462,7 @@ const App = () => {
                                             <button onClick={() => handleResumeTailor(app)} title="Tailor Resume" className="p-2 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors">🧩</button>
                                             <button onClick={() => handleGenerateCoverLetter(app)} title="Generate Cover Letter" className="p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">✨</button>
                                             <button onClick={() => handleGenerateInterviewQuestions(app)} title="Generate Interview Questions" className="p-2 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">💡</button>
-                                            <button onClick={() => handleQuickStatusUpdate(app, 'Applied')} className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200">Applied</button>
-                                            <button onClick={() => handleQuickStatusUpdate(app, 'Interview')} className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 hover:bg-yellow-200">Interview</button>
-                                            <button onClick={() => handleQuickStatusUpdate(app, 'Rejected')} className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 hover:bg-red-200">Rejected</button>
-                                            <button onClick={() => handleQuickStatusUpdate(app, 'Offer')} className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 hover:bg-green-200">Offer</button>
+                                            {/* Quick status buttons removed per user request */}
                                             <button onClick={() => handleEdit(app)} className="text-indigo-600 hover:text-indigo-900 transition-colors"><EditIcon /></button>
                                             <button onClick={() => handleDelete(app.id)} className="text-red-600 hover:text-red-900 transition-colors"><DeleteIcon /></button>
                                         </div>
@@ -535,6 +524,7 @@ const App = () => {
                         setUploadMessage('');
                         setResumeUploading(true);
                         setResumeProgress(0);
+                        setResumeFileName(file.name);
                         // Simulated progress while react-pdftotext parses
                         let tick = 0;
                         const interval = setInterval(() => {
@@ -565,7 +555,15 @@ const App = () => {
                         setResumeProgress(0);
                       }
                     }} />
-                    <button type="button" className="mt-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
+                    <div className="mt-2 flex items-center gap-3">
+                      <button type="button" className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
+                      {resumeFileName && !resumeUploading && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-700 truncate max-w-xs" title={resumeFileName}>{resumeFileName}</span>
+                          <button type="button" className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200" onClick={() => { setSettings(prev => ({ ...prev, resumeText: '' })); setResumeFileName(''); localStorage.removeItem('resumeText'); setUploadMessage(''); }}>Remove</button>
+                        </div>
+                      )}
+                    </div>
                     {resumeUploading && (
                       <div className="mt-3">
                         <div className="h-2 w-full bg-gray-200 rounded">
@@ -577,9 +575,7 @@ const App = () => {
                     {resumeUploading && (
                       <p className="text-sm text-indigo-600 mt-2">Uploading and parsing PDF…</p>
                     )}
-                    {settings.resumeText && !resumeUploading && (
-                      <p className="text-xs text-gray-500 mt-1">Resume text stored locally ({settings.resumeText.length} chars).</p>
-                    )}
+                    {/* Removed resume length text per user request */}
                     {uploadMessage && !resumeUploading && (
                       <p className="text-sm text-green-600 mt-2">{uploadMessage}</p>
                     )}
