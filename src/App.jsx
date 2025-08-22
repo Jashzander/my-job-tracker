@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase'; 
 import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
@@ -72,6 +72,7 @@ const App = () => {
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({ resumeText: '' });
+  const resumeInputRef = useRef(null);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -430,6 +431,7 @@ const App = () => {
               </div>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="w-full md:w-56 px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option value="All">All Statuses</option>
+                <option value="Pending">Pending</option>
                 <option value="Applied">Applied</option>
                 <option value="Interview">Interview</option>
                 <option value="Rejected">Rejected</option>
@@ -525,7 +527,7 @@ const App = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Upload Resume (PDF only)</label>
-                    <input type="file" accept="application/pdf" className="mt-1 w-full" onChange={async (e) => {
+                    <input ref={resumeInputRef} type="file" accept="application/pdf" className="mt-1 w-full hidden" onChange={async (e) => {
                       const file = e.target.files && e.target.files[0];
                       if (!file) return;
                       try {
@@ -541,6 +543,7 @@ const App = () => {
                             }
                             setSettings(prev => ({ ...prev, resumeText: text }));
                             localStorage.setItem('resumeText', text);
+                            setAlertMessage('Resume uploaded and parsed successfully.');
                           } catch (err) {
                             console.error('PDF parse failed', err);
                             alert('Could not parse PDF.');
@@ -552,6 +555,7 @@ const App = () => {
                         alert('Could not read file.');
                       }
                     }} />
+                    <button type="button" className="mt-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
                     {settings.resumeText && (
                       <p className="text-xs text-gray-500 mt-1">Resume text stored locally ({settings.resumeText.length} chars).</p>
                     )}
