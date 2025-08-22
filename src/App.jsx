@@ -412,7 +412,7 @@ const App = () => {
                 </div>
                 <div className="mt-6 flex justify-end space-x-4">
                     <button type="submit" className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">{editingApplication ? 'Save Changes' : 'Add Application'}</button>
-                    {editingApplication && <button type="button" onClick={() => { setEditingApplication(null); setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', dateApplied: new Date().toISOString().split('T')[0] }); }} className="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">Cancel</button>}
+                    {editingApplication && <button type="button" onClick={() => { setEditingApplication(null); setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', jobDescription: '', nextAction: '', reminderAt: '' }); }} className="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">Cancel</button>}
                 </div>
             </form>
 
