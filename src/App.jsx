@@ -537,18 +537,22 @@ const App = () => {
                       try {
                         setUploadMessage('');
                         setResumeUploading(true);
-                        setResumeProgress(0);
+                        setResumeProgress(5);
                         const reader = new FileReader();
                         reader.onload = async () => {
                           try {
-                            const loadingTask = getDocument({ data: new Uint8Array(reader.result) });
+                            const data = new Uint8Array(reader.result);
+                            const loadingTask = getDocument({ data });
+                            // Progress event may not fire for ArrayBuffer sources; set a safe baseline
                             loadingTask.onProgress = (progressData) => {
-                              if (progressData && progressData.total) {
-                                const pct = Math.min(50, Math.round((progressData.loaded / progressData.total) * 50));
+                              if (progressData && typeof progressData.loaded === 'number' && typeof progressData.total === 'number' && progressData.total > 0) {
+                                const pct = Math.max(5, Math.min(50, Math.round((progressData.loaded / progressData.total) * 50)));
                                 setResumeProgress(pct);
                               }
                             };
                             const pdf = await loadingTask.promise;
+                            // Ensure we hit 50% once the document is loaded
+                            setResumeProgress((prev) => (prev < 50 ? 50 : prev));
                             let text = '';
                             for (let i = 1; i <= pdf.numPages; i++) {
                               const page = await pdf.getPage(i);
@@ -557,6 +561,7 @@ const App = () => {
                               const pct = 50 + Math.round((i / pdf.numPages) * 50);
                               setResumeProgress(pct);
                             }
+                            setResumeProgress(100);
                             setSettings(prev => ({ ...prev, resumeText: text }));
                             localStorage.setItem('resumeText', text);
                             setUploadMessage('Resume uploaded and parsed successfully.');
