@@ -47,6 +47,7 @@ const App = () => {
   const [newApplication, setNewApplication] = useState({
     jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending',
     jobDescription: '',
+    dateApplied: new Date().toISOString().split('T')[0],
     nextAction: '', reminderAt: ''
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +149,7 @@ const App = () => {
         const userRef = collection(db, `users/${userId}/jobApplications`);
         await addDoc(userRef, payload);
       }
-      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending', jobDescription: '', nextAction: '', reminderAt: '' });
+      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending', jobDescription: '', dateApplied: new Date().toISOString().split('T')[0], nextAction: '', reminderAt: '' });
     } catch (error) {
       console.error("Error adding/updating document:", error);
     }
@@ -348,7 +349,7 @@ const App = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-8 font-[Inter] text-gray-800">
         <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl p-6 sm:p-10">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
               <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Job Application Tracker</h1>
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200">Settings</button>
@@ -404,6 +405,10 @@ const App = () => {
                             <option value="Offer">Offer</option>
                             <option value="Rejected">Rejected</option>
                         </select>
+                    </label>
+                    <label className="block">
+                        <span className="text-gray-700 font-medium">Date Applied</span>
+                        <input type="date" name="dateApplied" value={newApplication.dateApplied} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required />
                     </label>
                     <label className="block md:col-span-2">
                         <span className="text-gray-700 font-medium">Job Description (optional)</span>
