@@ -44,8 +44,8 @@ const GeminiAssistantModal = ({ title, onClose, children }) => (
 const App = () => {
   const [applications, setApplications] = useState([]);
   const [newApplication, setNewApplication] = useState({
-    jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', dateApplied: new Date().toISOString().split('T')[0],
-    location: '', employmentType: '', salaryRange: '', jobDescription: '',
+    jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied',
+    jobDescription: '',
     nextAction: '', reminderAt: ''
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,15 +124,25 @@ const App = () => {
     }
 
     try {
+      const payload = {
+        jobTitle: newApplication.jobTitle || '',
+        companyName: newApplication.companyName || '',
+        jobId: newApplication.jobId || '',
+        link: newApplication.link || '',
+        status: newApplication.status || 'Applied',
+        jobDescription: newApplication.jobDescription || '',
+        nextAction: newApplication.nextAction || '',
+        reminderAt: newApplication.reminderAt || ''
+      };
       if (editingApplication) {
         const docRef = doc(db, `users/${userId}/jobApplications`, editingApplication.id);
-        await updateDoc(docRef, { ...newApplication });
+        await updateDoc(docRef, payload);
         setEditingApplication(null);
       } else {
         const userRef = collection(db, `users/${userId}/jobApplications`);
-        await addDoc(userRef, { ...newApplication });
+        await addDoc(userRef, payload);
       }
-      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', dateApplied: new Date().toISOString().split('T')[0], location: '', employmentType: '', salaryRange: '', jobDescription: '', nextAction: '', reminderAt: '' });
+      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', jobDescription: '', nextAction: '', reminderAt: '' });
     } catch (error) {
       console.error("Error adding/updating document:", error);
     }
@@ -150,7 +160,16 @@ const App = () => {
 
   const handleEdit = (application) => {
     setEditingApplication(application);
-    setNewApplication(application);
+    setNewApplication({
+      jobTitle: application.jobTitle || '',
+      companyName: application.companyName || '',
+      jobId: application.jobId || '',
+      link: application.link || '',
+      status: application.status || 'Applied',
+      jobDescription: application.jobDescription || '',
+      nextAction: application.nextAction || '',
+      reminderAt: application.reminderAt || ''
+    });
   };
 
   const requestSort = (key) => {
@@ -251,7 +270,7 @@ const App = () => {
 
     // Extract structured fields from page text
     const extractJobFieldsWithAI = async (pageText) => {
-      const schema = `Return strict JSON with keys: jobTitle, companyName, location, employmentType, salaryRange, jobDescription, applicationLink.`;
+      const schema = `Return strict JSON with keys: jobTitle, companyName, jobDescription, applicationLink.`;
       const instr = `${schema} If unknown, use empty string. No commentary.`;
       const prompt = `${instr}\n\nPAGE:\n${pageText.slice(0, 12000)}`;
       return await generateJson(prompt);
@@ -271,9 +290,6 @@ const App = () => {
           jobTitle: data.jobTitle || prev.jobTitle,
           companyName: data.companyName || prev.companyName,
           link: data.applicationLink || jobUrlInput.trim() || prev.link,
-          location: data.location || prev.location,
-          employmentType: data.employmentType || prev.employmentType,
-          salaryRange: data.salaryRange || prev.salaryRange,
           jobDescription: data.jobDescription || prev.jobDescription,
         }));
         setAlertMessage('Auto-fill complete. Review and submit.');
@@ -340,7 +356,7 @@ const App = () => {
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowSettings(true)} className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200">Settings</button>
                 <button onClick={() => {
-                  const headers = ['jobTitle','companyName','jobId','status','dateApplied','link','location','employmentType','salaryRange'];
+                  const headers = ['jobTitle','companyName','jobId','status','link'];
                   const rows = applications.map(a => headers.map(h => `"${String(a[h] || '').replace(/"/g, '""')}"`).join(','));
                   const csv = [headers.join(','), ...rows].join('\n');
                   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -383,30 +399,13 @@ const App = () => {
                         <input type="url" name="link" value={newApplication.link} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
                     </label>
                     <label className="block">
-                        <span className="text-gray-700 font-medium">Location</span>
-                        <input type="text" name="location" value={newApplication.location} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
-                    </label>
-                    <label className="block">
-                        <span className="text-gray-700 font-medium">Employment Type</span>
-                        <input type="text" name="employmentType" value={newApplication.employmentType} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
-                    </label>
-                    <label className="block">
-                        <span className="text-gray-700 font-medium">Salary Range</span>
-                        <input type="text" name="salaryRange" value={newApplication.salaryRange} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
-                    </label>
-                    <label className="block">
                         <span className="text-gray-700 font-medium">Status</span>
                         <select name="status" value={newApplication.status} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            <option value="Pending">Pending</option>
                             <option value="Applied">Applied</option>
                             <option value="Interview">Interview</option>
                             <option value="Offer">Offer</option>
                             <option value="Rejected">Rejected</option>
                         </select>
-                    </label>
-                    <label className="block">
-                        <span className="text-gray-700 font-medium">Date Applied</span>
-                        <input type="date" name="dateApplied" value={newApplication.dateApplied} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" required />
                     </label>
                     <label className="block md:col-span-2">
                         <span className="text-gray-700 font-medium">Job Description (optional)</span>
