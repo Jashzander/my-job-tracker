@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase'; 
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+
+// Configure pdfjs worker (using exact installed version via unpkg)
+GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.54/build/pdf.worker.min.js';
 
 const EditIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -520,30 +524,15 @@ const App = () => {
               <GeminiAssistantModal title={'Settings'} onClose={() => { if (settings.resumeText) localStorage.setItem('resumeText', settings.resumeText); setShowSettings(false); }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Upload Resume (PDF or .txt)</label>
-                    <input type="file" accept="application/pdf,text/plain" className="mt-1 w-full" onChange={async (e) => {
+                    <label className="block text-sm font-medium text-gray-700">Upload Resume (PDF only)</label>
+                    <input type="file" accept="application/pdf" className="mt-1 w-full" onChange={async (e) => {
                       const file = e.target.files && e.target.files[0];
                       if (!file) return;
-                      if (file.type === 'text/plain') {
-                        const text = await file.text();
-                        setSettings(prev => ({ ...prev, resumeText: text }));
-                        localStorage.setItem('resumeText', text);
-                        return;
-                      }
-                      // PDF parse fallback using built-in Text extraction via browser API if available
                       try {
                         const reader = new FileReader();
                         reader.onload = async () => {
-                          // Attempt to extract text using PDF.js if loaded globally, else store as empty and prompt manual
                           try {
-                            const pdfjsLib = (window).pdfjsLib;
-                            if (!pdfjsLib) {
-                              setSettings(prev => ({ ...prev, resumeText: '' }));
-                              alert('For PDF parsing, please upload a .txt version of your resume or add pdfjs to the project.');
-                              return;
-                            }
-                            const loadingTask = pdfjsLib.getDocument(new Uint8Array(reader.result));
-                            const pdf = await loadingTask.promise;
+                            const pdf = await getDocument({ data: new Uint8Array(reader.result) }).promise;
                             let text = '';
                             for (let i = 1; i <= pdf.numPages; i++) {
                               const page = await pdf.getPage(i);
@@ -554,7 +543,7 @@ const App = () => {
                             localStorage.setItem('resumeText', text);
                           } catch (err) {
                             console.error('PDF parse failed', err);
-                            alert('Could not parse PDF. Please upload a .txt resume.');
+                            alert('Could not parse PDF.');
                           }
                         };
                         reader.readAsArrayBuffer(file);
