@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './firebase'; 
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-
-// Configure pdfjs worker (using exact installed version via unpkg)
-GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@5.4.54/build/pdf.worker.min.js';
+import pdfToText from 'react-pdftotext';
 
 const EditIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -537,43 +534,30 @@ const App = () => {
                       try {
                         setUploadMessage('');
                         setResumeUploading(true);
-                        setResumeProgress(5);
-                        const reader = new FileReader();
-                        reader.onload = async () => {
-                          try {
-                            const data = new Uint8Array(reader.result);
-                            const loadingTask = getDocument({ data });
-                            // Progress event may not fire for ArrayBuffer sources; set a safe baseline
-                            loadingTask.onProgress = (progressData) => {
-                              if (progressData && typeof progressData.loaded === 'number' && typeof progressData.total === 'number' && progressData.total > 0) {
-                                const pct = Math.max(5, Math.min(50, Math.round((progressData.loaded / progressData.total) * 50)));
-                                setResumeProgress(pct);
-                              }
-                            };
-                            const pdf = await loadingTask.promise;
-                            // Ensure we hit 50% once the document is loaded
-                            setResumeProgress((prev) => (prev < 50 ? 50 : prev));
-                            let text = '';
-                            for (let i = 1; i <= pdf.numPages; i++) {
-                              const page = await pdf.getPage(i);
-                              const content = await page.getTextContent();
-                              text += content.items.map(it => it.str).join(' ') + '\n';
-                              const pct = 50 + Math.round((i / pdf.numPages) * 50);
-                              setResumeProgress(pct);
-                            }
-                            setResumeProgress(100);
-                            setSettings(prev => ({ ...prev, resumeText: text }));
-                            localStorage.setItem('resumeText', text);
-                            setUploadMessage('Resume uploaded and parsed successfully.');
-                          } catch (err) {
-                            console.error('PDF parse failed', err);
-                            alert('Could not parse PDF.');
-                          } finally {
-                            setResumeUploading(false);
-                            setTimeout(() => setResumeProgress(0), 1200);
-                          }
-                        };
-                        reader.readAsArrayBuffer(file);
+                        setResumeProgress(0);
+                        // Simulated progress while react-pdftotext parses
+                        let tick = 0;
+                        const interval = setInterval(() => {
+                          tick += 1;
+                          setResumeProgress((prev) => (prev < 95 ? Math.min(95, prev + 2) : prev));
+                          if (tick > 120) clearInterval(interval); // safety
+                        }, 100);
+                        try {
+                          const text = await pdfToText(file);
+                          clearInterval(interval);
+                          setResumeProgress(100);
+                          setSettings(prev => ({ ...prev, resumeText: text }));
+                          localStorage.setItem('resumeText', text);
+                          setUploadMessage('Resume uploaded and parsed successfully.');
+                        } catch (err) {
+                          console.error('PDF parse failed', err);
+                          alert('Could not parse PDF.');
+                          clearInterval(interval);
+                          setResumeProgress(0);
+                        } finally {
+                          setResumeUploading(false);
+                          setTimeout(() => setResumeProgress(0), 1200);
+                        }
                       } catch (err) {
                         console.error(err);
                         alert('Could not read file.');
