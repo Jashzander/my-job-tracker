@@ -45,7 +45,7 @@ const GeminiAssistantModal = ({ title, onClose, children }) => (
 const App = () => {
   const [applications, setApplications] = useState([]);
   const [newApplication, setNewApplication] = useState({
-    jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied',
+    jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending',
     jobDescription: '',
     nextAction: '', reminderAt: ''
   });
@@ -148,7 +148,7 @@ const App = () => {
         const userRef = collection(db, `users/${userId}/jobApplications`);
         await addDoc(userRef, payload);
       }
-      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', jobDescription: '', nextAction: '', reminderAt: '' });
+      setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending', jobDescription: '', nextAction: '', reminderAt: '' });
     } catch (error) {
       console.error("Error adding/updating document:", error);
     }
@@ -412,7 +412,7 @@ const App = () => {
                 </div>
                 <div className="mt-6 flex justify-end space-x-4">
                     <button type="submit" className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">{editingApplication ? 'Save Changes' : 'Add Application'}</button>
-                    {editingApplication && <button type="button" onClick={() => { setEditingApplication(null); setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Applied', jobDescription: '', nextAction: '', reminderAt: '' }); }} className="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">Cancel</button>}
+                    {editingApplication && <button type="button" onClick={() => { setEditingApplication(null); setNewApplication({ jobTitle: '', companyName: '', jobId: '', link: '', status: 'Pending', jobDescription: '', nextAction: '', reminderAt: '' }); }} className="px-6 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">Cancel</button>}
                 </div>
             </form>
 
