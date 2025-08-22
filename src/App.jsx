@@ -67,13 +67,21 @@ const App = () => {
   const [autoFillLoading, setAutoFillLoading] = useState(false);
   // Settings
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState({ profileSummary: '', techStack: '', targetRoles: '' });
+  const [settings, setSettings] = useState({ resumeText: '' });
 
   // Load settings from localStorage
   useEffect(() => {
+    const storedResume = localStorage.getItem('resumeText');
+    if (storedResume) {
+      setSettings({ resumeText: storedResume });
+      return;
+    }
     const raw = localStorage.getItem('settings');
     if (raw) {
-      try { setSettings(JSON.parse(raw)); } catch { /* ignore */ }
+      try {
+        const obj = JSON.parse(raw);
+        if (obj && obj.resumeText) setSettings({ resumeText: obj.resumeText });
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -281,9 +289,9 @@ const App = () => {
     const handleGenerateCoverLetter = (app) => {
       setGeminiAssistantType('coverLetter');
       setGeminiResult('');
-      const base = settings.profileSummary ? `Profile: ${settings.profileSummary}\n` : '';
+      const resume = settings.resumeText ? `Resume (text):\n${settings.resumeText.slice(0, 3000)}\n` : '';
       const jobCtx = app ? `Job: ${app.jobTitle} at ${app.companyName}. Link: ${app.link || ''}.` : '';
-      setGeminiPromptInput(`${base}${jobCtx}`.trim());
+      setGeminiPromptInput(`${resume}${jobCtx}`.trim());
       setShowGeminiModal(true);
     };
 
@@ -293,20 +301,12 @@ const App = () => {
         generateContent(`Provide a list of common interview questions and tips for a ${app.jobTitle} position at ${app.companyName}. The output should be a clear, concise list of questions followed by a few helpful tips for the interview.`);
     };
 
-    const handleResumeTuner = () => {
-      setGeminiAssistantType('resumeTuner');
+    const handleResumeTailor = (app) => {
+      setGeminiAssistantType('resumeTailor');
       setGeminiResult('');
-      setGeminiPromptInput('');
-      setShowGeminiModal(true);
-    };
-
-    const handleGenerateResumeBullets = (app) => {
-      setGeminiAssistantType('resumeBullets');
-      setGeminiResult('');
-      const profile = settings.profileSummary ? `Profile: ${settings.profileSummary}\n` : '';
-      const tech = settings.techStack ? `Tech Stack: ${settings.techStack}\n` : '';
-      const jd = app?.jobDescription ? `Job Description: ${app.jobDescription}` : '';
-      setGeminiPromptInput(`${profile}${tech}${jd}`.trim());
+      const resume = settings.resumeText ? `Resume (text):\n${settings.resumeText.slice(0, 4000)}\n` : '';
+      const jd = app?.jobDescription ? `Job Description:\n${app.jobDescription}` : '';
+      setGeminiPromptInput(`${resume}${jd}`.trim());
       setShowGeminiModal(true);
     };
 
@@ -397,10 +397,11 @@ const App = () => {
                     <label className="block">
                         <span className="text-gray-700 font-medium">Status</span>
                         <select name="status" value={newApplication.status} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <option value="Pending">Pending</option>
                             <option value="Applied">Applied</option>
                             <option value="Interview">Interview</option>
-                            <option value="Rejected">Rejected</option>
                             <option value="Offer">Offer</option>
+                            <option value="Rejected">Rejected</option>
                         </select>
                     </label>
                     <label className="block">
@@ -442,6 +443,7 @@ const App = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button onClick={() => requestSort('jobId')} className="flex items-center space-x-1">Job ID</button></th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button onClick={() => requestSort('jobTitle')} className="flex items-center space-x-1">Job Title</button></th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button onClick={() => requestSort('companyName')} className="flex items-center space-x-1">Company</button></th>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"><button onClick={() => requestSort('status')} className="flex items-center space-x-1">Status</button></th>
@@ -451,6 +453,7 @@ const App = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {filteredApplications.map(app => (
                                 <tr key={app.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{app.jobId}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{app.jobTitle}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{app.companyName}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -458,10 +461,9 @@ const App = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex justify-center flex-wrap gap-2">
-                                            <button onClick={() => handleResumeTuner(app)} title="Generate Resume Tips" className="p-2 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors">📄</button>
+                                            <button onClick={() => handleResumeTailor(app)} title="Tailor Resume" className="p-2 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors">🧩</button>
                                             <button onClick={() => handleGenerateCoverLetter(app)} title="Generate Cover Letter" className="p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors">✨</button>
                                             <button onClick={() => handleGenerateInterviewQuestions(app)} title="Generate Interview Questions" className="p-2 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors">💡</button>
-                                            <button onClick={() => handleGenerateResumeBullets(app)} title="Generate Resume Bullets" className="p-2 rounded-full bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors">• • •</button>
                                             <button onClick={() => handleQuickStatusUpdate(app, 'Applied')} className="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200">Applied</button>
                                             <button onClick={() => handleQuickStatusUpdate(app, 'Interview')} className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 hover:bg-yellow-200">Interview</button>
                                             <button onClick={() => handleQuickStatusUpdate(app, 'Rejected')} className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 hover:bg-red-200">Rejected</button>
@@ -483,8 +485,7 @@ const App = () => {
                 <GeminiAssistantModal title={
                   geminiAssistantType === 'coverLetter' ? '✨ Cover Letter Generator' :
                   geminiAssistantType === 'interviewQuestions' ? '💡 Interview Questions' :
-                  geminiAssistantType === 'resumeBullets' ? '🧩 Resume Bullets' :
-                  '📄 Resume Tuner'
+                  '🧩 Tailor Resume'
                 } onClose={() => { setShowGeminiModal(false); setGeminiResult(''); setGeminiPromptInput(''); }}>
                     {geminiAssistantType === 'coverLetter' && (
                         <>
@@ -495,22 +496,12 @@ const App = () => {
                             </button>
                         </>
                     )}
-                    {geminiAssistantType === 'resumeTuner' && (
-                        <>
-                            <p className="text-gray-600 mb-4">Paste the job description below for tailored resume suggestions.</p>
-                            <textarea className="w-full h-40 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-4" placeholder="Paste job description here..." value={geminiPromptInput} onChange={(e) => setGeminiPromptInput(e.target.value)} />
-                            <button onClick={() => generateContent(`Analyze this job description and provide actionable suggestions for tailoring a resume to it: ${geminiPromptInput}`)} disabled={geminiLoading} className="w-full px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 transition-colors disabled:bg-gray-400">
-                                {geminiLoading ? 'Analyzing...' : 'Get Resume Tips'}
-                            </button>
-                        </>
-                    )}
-
-                    {geminiAssistantType === 'resumeBullets' && (
+                    {geminiAssistantType === 'resumeTailor' && (
                       <>
-                        <p className="text-gray-600 mb-2">We’ll generate 5-8 concise, ATS-friendly bullet points emphasizing outcomes and metrics.</p>
-                        <textarea className="w-full h-40 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none mb-3" placeholder="Context (profile, tech stack, job description)" value={geminiPromptInput} onChange={(e) => setGeminiPromptInput(e.target.value)} />
-                        <button onClick={() => generateContent(`Generate 6 resume bullet points (STAR-style when possible), each <= 22 words, action-verb first, quantify impact, tailored to this context: ${geminiPromptInput}`)} disabled={geminiLoading} className="w-full px-4 py-2 bg-purple-600 text-white font-semibold rounded-md hover:bg-purple-700 transition-colors disabled:bg-gray-400">
-                          {geminiLoading ? 'Generating...' : 'Generate Bullets'}
+                        <p className="text-gray-600 mb-2">Paste or edit the combined context (we prefill with your resume text and job description when available).</p>
+                        <textarea className="w-full h-40 p-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none mb-3" placeholder="Resume and Job Description context" value={geminiPromptInput} onChange={(e) => setGeminiPromptInput(e.target.value)} />
+                        <button onClick={() => generateContent(`You are a resume coach. Based on the following context, produce TWO sections:\n\n1) Tailoring Suggestions: 6-10 concrete, actionable steps to adapt the resume to the role (skills to surface, wording tweaks, project reordering).\n2) Sample ATS-Optimized Bullets: 6 bullets, <= 22 words each, action-verb first, quantify impact where possible.\n\nContext:\n${geminiPromptInput}`)} disabled={geminiLoading} className="w-full px-4 py-2 bg-teal-600 text-white font-semibold rounded-md hover:bg-teal-700 transition-colors disabled:bg-gray-400">
+                          {geminiLoading ? 'Generating...' : 'Tailor My Resume'}
                         </button>
                       </>
                     )}
@@ -527,19 +518,55 @@ const App = () => {
             )}
 
             {showSettings && (
-              <GeminiAssistantModal title={'Settings'} onClose={() => { localStorage.setItem('settings', JSON.stringify(settings)); setShowSettings(false); }}>
+              <GeminiAssistantModal title={'Settings'} onClose={() => { if (settings.resumeText) localStorage.setItem('resumeText', settings.resumeText); setShowSettings(false); }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Profile Summary</label>
-                    <textarea rows="3" className="mt-1 w-full rounded-md border border-gray-300 p-2" value={settings.profileSummary} onChange={(e)=> setSettings(prev=> ({...prev, profileSummary: e.target.value}))} placeholder="Fresh CS grad with internship experience in ..." />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Tech Stack</label>
-                    <input className="mt-1 w-full rounded-md border border-gray-300 p-2" value={settings.techStack} onChange={(e)=> setSettings(prev=> ({...prev, techStack: e.target.value}))} placeholder="React, Node, Python, SQL, AWS" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Target Roles</label>
-                    <input className="mt-1 w-full rounded-md border border-gray-300 p-2" value={settings.targetRoles} onChange={(e)=> setSettings(prev=> ({...prev, targetRoles: e.target.value}))} placeholder="SWE, Backend, Data, ML" />
+                    <label className="block text-sm font-medium text-gray-700">Upload Resume (PDF or .txt)</label>
+                    <input type="file" accept="application/pdf,text/plain" className="mt-1 w-full" onChange={async (e) => {
+                      const file = e.target.files && e.target.files[0];
+                      if (!file) return;
+                      if (file.type === 'text/plain') {
+                        const text = await file.text();
+                        setSettings(prev => ({ ...prev, resumeText: text }));
+                        localStorage.setItem('resumeText', text);
+                        return;
+                      }
+                      // PDF parse fallback using built-in Text extraction via browser API if available
+                      try {
+                        const reader = new FileReader();
+                        reader.onload = async () => {
+                          // Attempt to extract text using PDF.js if loaded globally, else store as empty and prompt manual
+                          try {
+                            const pdfjsLib = (window).pdfjsLib;
+                            if (!pdfjsLib) {
+                              setSettings(prev => ({ ...prev, resumeText: '' }));
+                              alert('For PDF parsing, please upload a .txt version of your resume or add pdfjs to the project.');
+                              return;
+                            }
+                            const loadingTask = pdfjsLib.getDocument(new Uint8Array(reader.result));
+                            const pdf = await loadingTask.promise;
+                            let text = '';
+                            for (let i = 1; i <= pdf.numPages; i++) {
+                              const page = await pdf.getPage(i);
+                              const content = await page.getTextContent();
+                              text += content.items.map(it => it.str).join(' ') + '\n';
+                            }
+                            setSettings(prev => ({ ...prev, resumeText: text }));
+                            localStorage.setItem('resumeText', text);
+                          } catch (err) {
+                            console.error('PDF parse failed', err);
+                            alert('Could not parse PDF. Please upload a .txt resume.');
+                          }
+                        };
+                        reader.readAsArrayBuffer(file);
+                      } catch (err) {
+                        console.error(err);
+                        alert('Could not read file.');
+                      }
+                    }} />
+                    {settings.resumeText && (
+                      <p className="text-xs text-gray-500 mt-1">Resume text stored locally ({settings.resumeText.length} chars).</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Gemini API Key (optional)</label>
