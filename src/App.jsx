@@ -74,6 +74,7 @@ const App = () => {
   const [settings, setSettings] = useState({ resumeText: '' });
   const resumeInputRef = useRef(null);
   const [uploadMessage, setUploadMessage] = useState('');
+  const [resumeUploading, setResumeUploading] = useState(false);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -533,6 +534,8 @@ const App = () => {
                       const file = e.target.files && e.target.files[0];
                       if (!file) return;
                       try {
+                        setUploadMessage('');
+                        setResumeUploading(true);
                         const reader = new FileReader();
                         reader.onload = async () => {
                           try {
@@ -549,19 +552,25 @@ const App = () => {
                           } catch (err) {
                             console.error('PDF parse failed', err);
                             alert('Could not parse PDF.');
+                          } finally {
+                            setResumeUploading(false);
                           }
                         };
                         reader.readAsArrayBuffer(file);
                       } catch (err) {
                         console.error(err);
                         alert('Could not read file.');
+                        setResumeUploading(false);
                       }
                     }} />
                     <button type="button" className="mt-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
-                    {settings.resumeText && (
+                    {resumeUploading && (
+                      <p className="text-sm text-indigo-600 mt-2">Uploading and parsing PDF…</p>
+                    )}
+                    {settings.resumeText && !resumeUploading && (
                       <p className="text-xs text-gray-500 mt-1">Resume text stored locally ({settings.resumeText.length} chars).</p>
                     )}
-                    {uploadMessage && (
+                    {uploadMessage && !resumeUploading && (
                       <p className="text-sm text-green-600 mt-2">{uploadMessage}</p>
                     )}
                   </div>
