@@ -276,11 +276,55 @@ const App = () => {
     };
 
     // Extract structured fields from page text
-    const extractJobFieldsWithAI = async (pageText) => {
-      const schema = `Return strict JSON with keys: jobTitle, companyName, jobDescription, applicationLink.`;
-      const instr = `${schema} If unknown, use empty string. No commentary.`;
-      const prompt = `${instr}\n\nPAGE:\n${pageText.slice(0, 12000)}`;
+    const extractJobFieldsWithAI = async (pageText, sourceUrl) => {
+      const schema = `Return strict JSON with keys: jobTitle, companyName, jobDescription, applicationLink, jobIdCandidate.`;
+      const guidance = `Infer jobIdCandidate from URL/query params or text if present. Prefer explicit patterns like gh_jid, job_id, Job ID, Requisition ID.`;
+      const prompt = `${schema}\n${guidance}\n\nURL: ${sourceUrl}\n\nPAGE:\n${pageText.slice(0, 12000)}`;
       return await generateJson(prompt);
+    };
+
+    // Heuristic extraction of job ID from common ATS URLs and page text
+    const extractJobIdHeuristics = (rawUrl, pageText) => {
+      try {
+        const url = new URL(rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`);
+        const href = url.href;
+        const search = url.search;
+        const fromParams = () => {
+          const params = new URLSearchParams(search);
+          const keys = ['gh_jid','job_id','jobid','jrno','requisitionId','rid','postingId','vacancyId'];
+          for (const k of keys) {
+            const v = params.get(k);
+            if (v) return v;
+          }
+          return '';
+        };
+        const fromPath = () => {
+          const patterns = [
+            /greenhouse\.io\/.*\/jobs\/(\d+)/i,
+            /jobs\.lever\.co\/[^/]+\/([a-f0-9-]{16,})/i,
+            /smartrecruiters\.com\/.*\/job\/([a-f0-9-]{8,})/i,
+            /workable\.com\/[^/]+\/([a-z0-9]{6,})/i,
+            /taleo\.net\/.+job=([^&]+)/i,
+            /ashbyhq\.com\/[^?\n]+\/([^/?#\s]+)/i,
+            /workdayjobs\.com\/[^?\n]+\/(job|position)\/([A-Z0-9-]{6,})/i,
+            /bamboohr\.com\/careers\/view\/([A-Za-z0-9_-]+)/i,
+          ];
+          for (const re of patterns) {
+            const m = href.match(re);
+            if (m) return m[m.length - 1];
+          }
+          return '';
+        };
+        const fromText = () => {
+          const re = /(Job\s*ID|Requisition\s*ID|Req\s*ID|Posting\s*Number|Reference\s*Number)\s*[:#-]?\s*([A-Za-z0-9_/-]+)/i;
+          const m = pageText.match(re);
+          if (m) return (m[2] || '').replace(/[.,;)]$/, '');
+          return '';
+        };
+        return fromParams() || fromPath() || fromText();
+      } catch {
+        return '';
+      }
     };
 
     const handleAutoFillFromUrl = async () => {
@@ -290,14 +334,17 @@ const App = () => {
       }
       setAutoFillLoading(true);
       try {
-        const text = await fetchJobPageText(jobUrlInput.trim());
-        const data = await extractJobFieldsWithAI(text);
+        const sourceUrl = jobUrlInput.trim();
+        const text = await fetchJobPageText(sourceUrl);
+        const heuristicId = extractJobIdHeuristics(sourceUrl, text);
+        const data = await extractJobFieldsWithAI(text, sourceUrl);
         setNewApplication(prev => ({
           ...prev,
           jobTitle: data.jobTitle || prev.jobTitle,
           companyName: data.companyName || prev.companyName,
           link: data.applicationLink || jobUrlInput.trim() || prev.link,
           jobDescription: data.jobDescription || prev.jobDescription,
+          jobId: (data.jobIdCandidate || heuristicId || prev.jobId || '').toString(),
         }));
         setAlertMessage('Auto-fill complete. Review and submit.');
       } catch (e) {
