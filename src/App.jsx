@@ -364,7 +364,7 @@ const App = () => {
                 }} className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">Export CSV</button>
               </div>
             </div>
-            {userId && <p className="text-sm text-center text-gray-500 mb-4">Your unique user ID: <span className="font-mono bg-gray-200 px-2 py-1 rounded-md text-sm">{userId}</span></p>}
+            {/* User ID display removed per request */}
 
             {/* AI Auto-Fill from URL */}
             <div className="mb-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
