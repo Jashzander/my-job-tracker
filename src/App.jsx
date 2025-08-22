@@ -73,6 +73,7 @@ const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState({ resumeText: '' });
   const resumeInputRef = useRef(null);
+  const [uploadMessage, setUploadMessage] = useState('');
 
   // Load settings from localStorage
   useEffect(() => {
@@ -406,6 +407,7 @@ const App = () => {
                     <label className="block">
                         <span className="text-gray-700 font-medium">Status</span>
                         <select name="status" value={newApplication.status} onChange={handleInputChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <option value="Pending">Pending</option>
                             <option value="Applied">Applied</option>
                             <option value="Interview">Interview</option>
                             <option value="Offer">Offer</option>
@@ -543,7 +545,7 @@ const App = () => {
                             }
                             setSettings(prev => ({ ...prev, resumeText: text }));
                             localStorage.setItem('resumeText', text);
-                            setAlertMessage('Resume uploaded and parsed successfully.');
+                            setUploadMessage('Resume uploaded and parsed successfully.');
                           } catch (err) {
                             console.error('PDF parse failed', err);
                             alert('Could not parse PDF.');
@@ -558,6 +560,9 @@ const App = () => {
                     <button type="button" className="mt-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
                     {settings.resumeText && (
                       <p className="text-xs text-gray-500 mt-1">Resume text stored locally ({settings.resumeText.length} chars).</p>
+                    )}
+                    {uploadMessage && (
+                      <p className="text-sm text-green-600 mt-2">{uploadMessage}</p>
                     )}
                   </div>
                   <div>
