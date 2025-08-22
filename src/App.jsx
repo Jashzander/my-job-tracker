@@ -75,6 +75,7 @@ const App = () => {
   const resumeInputRef = useRef(null);
   const [uploadMessage, setUploadMessage] = useState('');
   const [resumeUploading, setResumeUploading] = useState(false);
+  const [resumeProgress, setResumeProgress] = useState(0);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -536,15 +537,25 @@ const App = () => {
                       try {
                         setUploadMessage('');
                         setResumeUploading(true);
+                        setResumeProgress(0);
                         const reader = new FileReader();
                         reader.onload = async () => {
                           try {
-                            const pdf = await getDocument({ data: new Uint8Array(reader.result) }).promise;
+                            const loadingTask = getDocument({ data: new Uint8Array(reader.result) });
+                            loadingTask.onProgress = (progressData) => {
+                              if (progressData && progressData.total) {
+                                const pct = Math.min(50, Math.round((progressData.loaded / progressData.total) * 50));
+                                setResumeProgress(pct);
+                              }
+                            };
+                            const pdf = await loadingTask.promise;
                             let text = '';
                             for (let i = 1; i <= pdf.numPages; i++) {
                               const page = await pdf.getPage(i);
                               const content = await page.getTextContent();
                               text += content.items.map(it => it.str).join(' ') + '\n';
+                              const pct = 50 + Math.round((i / pdf.numPages) * 50);
+                              setResumeProgress(pct);
                             }
                             setSettings(prev => ({ ...prev, resumeText: text }));
                             localStorage.setItem('resumeText', text);
@@ -554,6 +565,7 @@ const App = () => {
                             alert('Could not parse PDF.');
                           } finally {
                             setResumeUploading(false);
+                            setTimeout(() => setResumeProgress(0), 1200);
                           }
                         };
                         reader.readAsArrayBuffer(file);
@@ -561,9 +573,18 @@ const App = () => {
                         console.error(err);
                         alert('Could not read file.');
                         setResumeUploading(false);
+                        setResumeProgress(0);
                       }
                     }} />
                     <button type="button" className="mt-2 px-4 py-2 bg-gray-100 text-gray-800 rounded-md border hover:bg-gray-200" onClick={() => resumeInputRef.current && resumeInputRef.current.click()}>Choose File</button>
+                    {resumeUploading && (
+                      <div className="mt-3">
+                        <div className="h-2 w-full bg-gray-200 rounded">
+                          <div className="h-2 bg-indigo-600 rounded" style={{ width: `${resumeProgress}%` }}></div>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">Parsing PDF… {resumeProgress}%</p>
+                      </div>
+                    )}
                     {resumeUploading && (
                       <p className="text-sm text-indigo-600 mt-2">Uploading and parsing PDF…</p>
                     )}
